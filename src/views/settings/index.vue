@@ -3,37 +3,24 @@
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
-          <span>卡片名称</span>
+          <el-select v-model="form.sid" filterable placeholder="请选择" @change="sidChage">
+            <el-option
+              v-for="item in options"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
           <div>
             <el-button type="primary" @click="dialogFormVisible = true">
               <i class="el-icon-plus" />新增配置文件
             </el-button>
-            <el-button type="primary" @click="dialogFormVisible1 = true">
+            <el-button type="primary" @click="setSettingItem">
               <i class="el-icon-plus" />新增配置项
             </el-button>
           </div>
         </div>
       </template>
-      <!--添加配置文件    -->
-      <el-dialog v-model="dialogFormVisible" title="新增配置文件">
-        <el-form :model="form">
-          <el-form-item label="活动名称" :label-width="formLabelWidth">
-            <el-input v-model="form.name" autocomplete="off" />
-          </el-form-item>
-          <el-form-item label="活动区域" :label-width="formLabelWidth">
-            <el-select v-model="form.region" placeholder="请选择活动区域">
-              <el-option label="区域一" value="shanghai" />
-              <el-option label="区域二" value="beijing" />
-            </el-select>
-          </el-form-item>
-        </el-form>
-        <template #footer>
-          <span class="dialog-footer">
-            <el-button @click="dialogFormVisible = false">取 消</el-button>
-            <el-button type="primary" @click="dialogFormVisible = false">确 定</el-button>
-          </span>
-        </template>
-      </el-dialog>
       <el-input
         v-model="filterText"
         placeholder="输入关键字进行过滤"
@@ -71,17 +58,17 @@
     </el-card>
     <!--新增配置文件-->
     <el-dialog title="新增配置文件" :visible.sync="dialogFormVisible">
-      <el-form :model="form">
+      <el-form :model="fileForm">
         <el-form-item label="文件名称" :label-width="formLabelWidth">
-          <el-input v-model="form.name" autocomplete="off" />
+          <el-input v-model="fileForm.name" autocomplete="off" />
         </el-form-item>
         <el-form-item type="textarea" label="描述" :label-width="formLabelWidth">
-          <el-input v-model="form.desc" autocomplete="off" />
+          <el-input v-model="fileForm.desc" autocomplete="off" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">取 消</el-button>
-        <el-button type="primary" @click="dialogFormVisible = false">确 定</el-button>
+        <el-button type="primary" @click="mergeSetting">确 定</el-button>
       </div>
     </el-dialog>
 
@@ -111,6 +98,7 @@
 
 <script>
 import { settingDetails, mergeSettingDetail, delSettingDetail } from '@/api/setting'
+import { settings, editSetting } from '@/api/setting'
 import { Message } from 'element-ui'
 
 export default {
@@ -132,10 +120,15 @@ export default {
         sid: '',
         value: ''
       },
+      fileForm: {
+        name: '',
+        desc: ''
+      },
       formLabelWidth: '120px',
       dialogFormVisible: false,
       dialogFormVisible1: false,
-      default_key: []
+      default_key: [],
+      options: []
     }
   },
   watch: {
@@ -143,11 +136,46 @@ export default {
       this.$refs.tree.filter(val)
     }
   },
+  created() {
+    this.getSettings()
+  },
   methods: {
+    setSettingItem() {
+      this.append({}, 1)
+      this.form.pid = 0
+    },
+    sidChage(val) {
+      this.default_key = []
+      this.form.sid = val
+      this.getSettingDetails()
+    },
+    async getSettings() {
+      await settings({}).then(res => {
+        this.options = res.content
+        if (this.options.length > 0) {
+          this.form.sid = this.options[0].id
+        }
+      })
+    },
+    mergeSetting() {
+      editSetting(this.fileForm).then(res => {
+        if (res.code === 20000) {
+          this.dialogFormVisible = false
+          this.getSettings()
+          Message({ message: res.msg, type: 'success' })
+        } else {
+          Message({ message: res.msg, type: 'error' })
+        }
+      })
+    },
     getSettingDetails() {
+      if (this.form.sid === '') {
+        setTimeout(this.getSettingDetails, 100)
+        return
+      }
       const params = {
         pid: 0,
-        sid: 1
+        sid: this.form.sid
       }
       settingDetails(params).then(res => {
         res.content.forEach(s => {

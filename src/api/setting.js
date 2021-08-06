@@ -23,3 +23,19 @@ export function delSettingDetail(params) {
     data: params
   })
 }
+
+export function settings(params) {
+  return request({
+    url: '/settings/getSettings',
+    method: 'get',
+    params
+  })
+}
+
+export function editSetting(params) {
+  return request({
+    url: '/settings/mergeSetting',
+    method: 'post',
+    params
+  })
+}
